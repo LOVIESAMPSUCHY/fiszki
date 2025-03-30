@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiszki - Niemiecki</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.5s;
+        }
+
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            position: sticky;
+            top: 10px;
+            z-index: 10;
+        }
+
+        select, button, input[type="checkbox"] {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background-color: #1a73e8;
+            color: white;
+        }
+
+        .stats {
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .flashcard-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+            transition: opacity 0.5s;
+        }
+
+        .flashcard {
+            width: 320px;
+            height: 220px;
+            position: relative;
+            perspective: 1000px;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.5s ease;
+            opacity: 1;
+        }
+
+        .flashcard.hidden {
+            display: none;
+        }
+
+        .flashcard.fullscreen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            height: 80vh;
+            max-width: 800px;
+            max-height: 500px;
+            z-index: 100;
+            font-size: 32px;
+        }
+
+        .front, .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            border-radius: 15px;
+            padding: 10px;
+            text-align: center;
+            transition: transform 0.6s ease;
+        }
+
+        .front {
+            background-color: #ffffff;
+            color: #333;
+            transform: rotateY(0deg);
+        }
+
+        .back {
+            background-color: #e8f0fe;
+            color: #1a73e8;
+            transform: rotateY(180deg);
+        }
+
+        .flashcard.flipped .front {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard.flipped .back {
+            transform: rotateY(0deg);
+        }
+
+        .buttons {
+            position: absolute;
+            bottom: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .flip-btn, .speak-btn {
+            padding: 6px 12px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .speak-btn {
+            background-color: #34c759;
+        }
+
+        .flip-btn:hover, .speak-btn:hover {
+            opacity: 0.9;
+        }
+
+        .quiz-input {
+            display: none;
+            margin-top: 10px;
+            padding: 8px;
+            width: 80%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .quiz-input.visible {
+            display: block;
+        }
+
+        .difficulty {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .easy { background-color: #d4edda; color: #155724; }
+        .medium { background-color: #fff3cd; color: #856404; }
+        .hard { background-color: #f8d7da; color: #721c24; }
+
+        @media (max-width: 600px) {
+            .flashcard {
+                width: 100%;
+                max-width: 280px;
+                height: 180px;
+                font-size: 18px;
+            }
+
+            .flashcard.fullscreen {
+                width: 90vw;
+                height: 70vh;
+                font-size: 24px;
+            }
+
+            .buttons {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Fiszki - Niemiecki</h1>
+    <div class="controls">
+        <select id="lesson-filter">
+            <option value="all">Wszystkie lekcje</option>
+            <option value="lektion1">Lektion 1 – Festiwal filmowy</option>
+            <option value="lektion2">Lektion 2 – Film</option>
+            <option value="lektion3">Lektion 3 – Telewizja</option>
+            <option value="lektion4">Lektion 4 – Telewizja (cd.)</option>
+        </select>
+        <select id="difficulty-filter">
+            <option value="all">Wszystkie trudności</option>
+            <option value="easy">Łatwe</option>
+            <option value="medium">Średnie</option>
+            <option value="hard">Trudne</option>
+        </select>
+        <button onclick="randomFlashcard()">Losuj fiszkę</button>
+        <button onclick="toggleQuizMode()">Tryb quizu</button>
+        <button onclick="toggleFullscreen()">Pełny ekran</button>
+        <label><input type="checkbox" id="reverse-mode" onchange="toggleReverseMode()"> Niemiecki → Polski</label>
+    </div>
+    <div class="stats" id="stats-text">Poprawne: 0 | Błędne: 0 | Postęp: 0/0</div>
+    <div class="flashcard-container">
+        <!-- Lektion 1 -->
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Bedeutung, -en</div>
+            <div class="back">znaczenie</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">bekommen</div>
+            <div class="back">dostawać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Ehrenpreis, -e</div>
+            <div class="back">nagroda honorowa</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">das Festival, -s</div>
+            <div class="back">festiwal</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">das Filmfest, -e</div>
+            <div class="back">festiwal filmowy</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Gründung, -en</div>
+            <div class="back">utworzenie, założenie</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Kinokarte, -n</div>
+            <div class="back">bilet do kina</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Preis, -e</div>
+            <div class="back">nagroda</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Preisträger</div>
+            <div class="back">laureat nagrody</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speak aconteceuText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">das Publikum (Sg.)</div>
+            <div class="back">publiczność</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Regisseur, -e</div>
+            <div class="back">reżyser</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Superstar, -s</div>
+            <div class="back">supergwiazda</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="hard">
+            <div class="difficulty hard">Trudne</div>
+            <div class="front">teilnehmen an + Dativ</div>
+            <div class="back">brać udział w</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Teppich, -e</div>
+            <div class="back">dywan</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Treffpunkt, -e</div>
+            <div class="back">miejsce spotkań</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Veranstaltung, -en</div>
+            <div class="back">impreza</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion1" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">verleihen</div>
+            <div class="back">przyznawać, wręczać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+
+        <!-- Lektion 2 -->
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Abenteuerfilm, -e</div>
+            <div class="back">film przygodowy</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">aufnehmen</div>
+            <div class="back">nagrywać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">drehen</div>
+            <div class="back">kręcić</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">führen</div>
+            <div class="back">prowadzić</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Handlung (Sg.)</div>
+            <div class="back">akcja</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Hauptdarsteller</div>
+            <div class="back">aktor grający główną rolę</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Hauptrolle, -n</div>
+            <div class="back">główna rola</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Komödie, -n</div>
+            <div class="back">komedia</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Kriminalfilm, -e</div>
+            <div class="back">film kryminalny</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Laufzeit, -en</div>
+            <div class="back">czas trwania</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">das Melodram, Melodramen</div>
+            <div class="back">melodramat</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Nebenrolle, -n</div>
+            <div class="back">rola drugoplanowa</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Regie (Sg.)</div>
+            <div class="back">reżyseria</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Schauspieler, -</div>
+            <div class="back">aktor</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Schauspielerin, -nen</div>
+            <div class="back">aktorka</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">spielen</div>
+            <div class="back">grać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Szene, -n</div>
+            <div class="back">scena</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Thriller, -</div>
+            <div class="back">thriller</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion2" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Zeichentrickfilm, -e</div>
+            <div class="back">film rysunkowy</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+
+        <!-- Lektion 3 -->
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">fernsehen</div>
+            <div class="back">oglądać telewizję</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">das Kinderprogramm, -e</div>
+            <div class="back">program dla dzieci</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">das Konzert, -e</div>
+            <div class="back">koncert</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Krimiserie, -n</div>
+            <div class="back">serial kryminalny</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">das Märchen, -</div>
+            <div class="back">bajka</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Nachrichten (Pl.)</div>
+            <div class="back">wiadomości</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">das Quiz, -</div>
+            <div class="back">quiz</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Reportage, -n</div>
+            <div class="back">reportaż</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Sendung, -en</div>
+            <div class="back">audycja, program</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Sportsendung, -en</div>
+            <div class="back">program sportowy</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Talkshow, -s</div>
+            <div class="back">talk-show</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">die Unterhaltungssendung, -en</div>
+            <div class="back">program rozrywkowy</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Werbung (Sg.)</div>
+            <div class="back">reklama</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion3" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Wetterbericht, -e</div>
+            <div class="back">prognoza pogody</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+
+        <!-- Lektion 4 -->
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Aktivität, -en</div>
+            <div class="back">aktywność</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">ausschalten</div>
+            <div class="back">wyłączać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Bildschirm, -e</div>
+            <div class="back">ekran, monitor</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">das Computerspiel, -e</div>
+            <div class="back">gra komputerowa</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">einschalten</div>
+            <div class="back">włączać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">erkennen</div>
+            <div class="back">rozpoznawać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">das Fernsehen (Sg.)</div>
+            <div class="back">telewizja</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">der Fernseher, -</div>
+            <div class="back">telewizor</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Handlung (Sg.)</div>
+            <div class="back">akcja</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Lieblingsfilm, -e</div>
+            <div class="back">ulubiony film</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="hard">
+            <div class="difficulty hard">Trudne</div>
+            <div class="front">sich auskennen in + Dativ</div>
+            <div class="back">znać się na</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="hard">
+            <div class="difficulty hard">Trudne</div>
+            <div class="front">sich auswirken auf + Akkusativ</div>
+            <div class="back">oddziaływać na</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="medium">
+            <div class="difficulty medium">Średnie</div>
+            <div class="front">der Umgang (Sg.)</div>
+            <div class="back">obchodzenie się z</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">verbringen</div>
+            <div class="back">spędzać</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">verstehen</div>
+            <div class="back">rozumieć</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+        <div class="flashcard" data-lesson="lektion4" data-difficulty="easy">
+            <div class="difficulty easy">Łatwe</div>
+            <div class="front">die Wirkung, -en</div>
+            <div class="back">działanie</div>
+            <input type="text" class="quiz-input" placeholder="Wpisz tłumaczenie">
+            <div class="buttons">
+                <button class="flip-btn" onclick="flipCard(this)">Pokaż tłumaczenie</button>
+                <button class="speak-btn" onclick="speakText(this)">Wymów</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let quizMode = false;
+        let reverseMode = false;
+        let fullscreenMode = false;
+        let reviewedCards = new Set();
+        let correctAnswers = 0;
+        let wrongAnswers = 0;
+
+        // Ładowanie danych z localStorage
+        function loadProgress() {
+            const savedReviewed = localStorage.getItem('reviewedCards');
+            const savedCorrect = localStorage.getItem('correctAnswers');
+            const savedWrong = localStorage.getItem('wrongAnswers');
+            if (savedReviewed) reviewedCards = new Set(JSON.parse(savedReviewed));
+            correctAnswers = savedCorrect ? parseInt(savedCorrect) : 0;
+            wrongAnswers = savedWrong ? parseInt(savedWrong) : 0;
+            updateStats();
+        }
+
+        // Zapisywanie danych do localStorage
+        function saveProgress() {
+            localStorage.setItem('reviewedCards', JSON.stringify([...reviewedCards].map(card => card.querySelector('.front').textContent)));
+            localStorage.setItem('correctAnswers', correctAnswers);
+            localStorage.setItem('wrongAnswers', wrongAnswers);
+        }
+
+        // Funkcja przewracania fiszki
+        function flipCard(button) {
+            const flashcard = button.parentElement.parentElement;
+            const input = flashcard.querySelector('.quiz-input');
+            const backText = flashcard.querySelector('.back').textContent.trim();
+
+            if (quizMode && input.value) {
+                if (input.value.trim().toLowerCase() === backText.toLowerCase()) {
+                    flashcard.style.backgroundColor = '#e6ffe6';
+                    correctAnswers++;
+                    reviewedCards.add(flashcard);
+                } else {
+                    flashcard.style.backgroundColor = '#ffe6e6';
+                    wrongAnswers++;
+                }
+                setTimeout(() => {
+                    flashcard.style.backgroundColor = '#fff';
+                    input.value = '';
+                    flashcard.classList.toggle('flipped');
+                    updateStats();
+                    saveProgress();
+                }, 1000);
+            } else {
+                flashcard.classList.toggle('flipped');
+                button.textContent = flashcard.classList.contains('flipped') ? 'Pokaż słowo' : 'Pokaż tłumaczenie';
+                if (!quizMode) reviewedCards.add(flashcard);
+                updateStats();
+                saveProgress();
+            }
+        }
+
+        // Funkcja wymowy
+        function speakText(button) {
+            const flashcard = button.parentElement.parentElement;
+            const text = reverseMode ? flashcard.querySelector('.back').textContent : flashcard.querySelector('.front').textContent;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = reverseMode ? 'pl-PL' : 'de-DE';
+            speechSynthesis.speak(utterance);
+        }
+
+        // Filtrowanie lekcji i trudności
+        function filterFlashcards() {
+            const selectedLesson = document.getElementById('lesson-filter').value;
+            const selectedDifficulty = document.getElementById('difficulty-filter').value;
+            const flashcards = document.querySelectorAll('.flashcard');
+            flashcards.forEach(card => {
+                const lessonMatch = selectedLesson === 'all' || card.getAttribute('data-lesson') === selectedLesson;
+                const difficultyMatch = selectedDifficulty === 'all' || card.getAttribute('data-difficulty') === selectedDifficulty;
+                if (lessonMatch && difficultyMatch) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+            updateStats();
+        }
+
+        document.getElementById('lesson-filter').addEventListener('change', filterFlashcards);
+        document.getElementById('difficulty-filter').addEventListener('change', filterFlashcards);
+
+        // Losowanie fiszki
+        function randomFlashcard() {
+            const selectedLesson = document.getElementById('lesson-filter').value;
+            const selectedDifficulty = document.getElementById('difficulty-filter').value;
+            const flashcards = Array.from(document.querySelectorAll('.flashcard')).filter(card => {
+                const lessonMatch = selectedLesson === 'all' || card.getAttribute('data-lesson') === selectedLesson;
+                const difficultyMatch = selectedDifficulty === 'all' || card.getAttribute('data-difficulty') === selectedDifficulty;
+                return lessonMatch && difficultyMatch;
+            });
+            flashcards.forEach(card => card.classList.add('hidden'));
+            const randomIndex = Math.floor(Math.random() * flashcards.length);
+            flashcards[randomIndex].classList.remove('hidden');
+            flashcards[randomIndex].classList.remove('flipped');
+            flashcards[randomIndex].querySelector('.flip-btn').textContent = quizMode ? 'Sprawdź' : 'Pokaż tłumaczenie';
+            flashcards[randomIndex].querySelector('.quiz-input').value = '';
+            if (fullscreenMode) flashcards[randomIndex].classList.add('fullscreen');
+        }
+
+        // Tryb quizu
+        function toggleQuizMode() {
+            quizMode = !quizMode;
+            const inputs = document.querySelectorAll('.quiz-input');
+            const buttons = document.querySelectorAll('.flip-btn');
+            inputs.forEach(input => input.classList.toggle('visible', quizMode));
+            buttons.forEach(button => button.textContent = quizMode ? 'Sprawdź' : 'Pokaż tłumaczenie');
+            reviewedCards.clear();
+            correctAnswers = 0;
+            wrongAnswers = 0;
+            updateStats();
+            saveProgress();
+        }
+
+        // Tryb pełnoekranowy
+        function toggleFullscreen() {
+            fullscreenMode = !fullscreenMode;
+            const container = document.querySelector('.flashcard-container');
+            const flashcards = document.querySelectorAll('.flashcard');
+            document.body.style.backgroundColor = fullscreenMode ? '#e0e0e0' : '#f0f2f5';
+            container.style.opacity = fullscreenMode ? '0' : '1';
+            if (fullscreenMode) {
+                randomFlashcard();
+            } else {
+                flashcards.forEach(card => {
+                    card.classList.remove('fullscreen');
+                    card.classList.remove('hidden');
+                });
+                filterFlashcards();
+            }
+        }
+
+        // Przełącznik kierunku
+        function toggleReverseMode() {
+            reverseMode = !reverseMode;
+            const flashcards = document.querySelectorAll('.flashcard');
+            flashcards.forEach(card => {
+                const front = card.querySelector('.front');
+                const back = card.querySelector('.back');
+                const frontText = front.textContent;
+                front.textContent = back.textContent;
+                back.textContent = frontText;
+                card.classList.remove('flipped');
+                card.querySelector('.flip-btn').textContent = quizMode ? 'Sprawdź' : 'Pokaż tłumaczenie';
+            });
+        }
+
+        // Aktualizacja statystyk
+        function updateStats() {
+            const selectedLesson = document.getElementById('lesson-filter').value;
+            const selectedDifficulty = document.getElementById('difficulty-filter').value;
+            const flashcards = Array.from(document.querySelectorAll('.flashcard')).filter(card => {
+                const lessonMatch = selectedLesson === 'all' || card.getAttribute('data-lesson') === selectedLesson;
+                const difficultyMatch = selectedDifficulty === 'all' || card.getAttribute('data-difficulty') === selectedDifficulty;
+                return lessonMatch && difficultyMatch;
+            });
+            const total = flashcards.length;
+            const reviewed = flashcards.filter(card => reviewedCards.has(card)).length;
+            document.getElementById('stats-text').textContent = `Poprawne: ${correctAnswers} | Błędne: ${wrongAnswers} | Postęp: ${reviewed}/${total}`;
+        }
+
+        // Inicjalizacja
+        loadProgress();
+        filterFlashcards();
+    </script>
+</body>
+</html>
